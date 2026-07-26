@@ -1,0 +1,77 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+from database import Base, engine, SessionLocal
+from auth import register, login
+from banking import deposit, withdraw, transfer
+
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+
+class Register(BaseModel):
+    username: str
+    password: str
+
+
+class Transaction(BaseModel):
+    username: str
+    amount: float
+
+
+class Transfer(BaseModel):
+    sender: str
+    receiver: str
+    amount: float
+
+
+@app.post("/register")
+def create_user(user: Register):
+
+    db = SessionLocal()
+
+    return register(db, user.username, user.password)
+
+
+@app.post("/login")
+def user_login(user: Register):
+
+    db = SessionLocal()
+
+    result = login(db, user.username, user.password)
+
+    if result:
+        return {"message": "Login Successful"}
+
+    return {"message": "Login Failed"}
+
+
+@app.post("/deposit")
+def make_deposit(data: Transaction):
+
+    db = SessionLocal()
+
+    balance = deposit(db, data.username, data.amount)
+
+    return {"balance": balance}
+
+
+@app.post("/withdraw")
+def make_withdraw(data: Transaction):
+
+    db = SessionLocal()
+
+    balance = withdraw(db, data.username, data.amount)
+
+    return {"balance": balance}
+
+
+@app.post("/transfer")
+def make_transfer(data: Transfer):
+
+    db = SessionLocal()
+
+    result = transfer(db, data.sender, data.receiver, data.amount)
+
+    return {"message": result}
